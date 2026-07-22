@@ -426,7 +426,7 @@
             background: var(--doc-bg);
         }
         .c36 {
-            border: 2.2pt dashed var(--doc-border2);
+            border: 2.2pt dashed var(--doc-border3);
             background: var(--doc-bg2);
         }
         .c29 {
@@ -979,15 +979,16 @@
             const schemeButtons = document.querySelectorAll('.scheme-btn');
             let scheme = 'mono';
             const ROLE_HUE_OFFSETS = {
-                mono: { heading: 0, border2: 0, bg: 0, bg2: 0, pageBg: 0 },
-                analogous: { heading: -12, border2: -22, bg: 24, bg2: 12, pageBg: 30 },
-                complementary: { heading: 0, border2: 0, bg: 180, bg2: 180, pageBg: 180 },
-                triadic: { heading: 0, border2: 120, bg: 240, bg2: 240, pageBg: 240 }
+                mono: { heading: 0, border2: 0, border3: 0, bg: 0, bg2: 0, pageBg: 0 },
+                analogous: { heading: -12, border2: -22, border3: -22, bg: 24, bg2: 12, pageBg: 30 },
+                complementary: { heading: 0, border2: 0, border3: 0, bg: 180, bg2: 180, pageBg: 180 },
+                triadic: { heading: 0, border2: 120, border3: 120, bg: 240, bg2: 240, pageBg: 240 }
             };
-            const EDITABLE_ELEMENTS = ['heading', 'border2', 'bg', 'bg2', 'pageBg'];
+            const EDITABLE_ELEMENTS = ['heading', 'border2', 'border3', 'bg', 'bg2', 'pageBg'];
             const ELEMENT_LABELS = {
                 heading: 'Текст и границы шапки',
                 border2: 'Граница заголовков',
+                border3: 'Граница подзаголовков',
                 bg: 'Фон заголовков',
                 bg2: 'Фон подзаголовков',
                 pageBg: 'Фон документа'
@@ -1090,7 +1091,6 @@
                 const rgb = hslToRgb(h, s, l);
                 return rgbToHex(rgb.r, rgb.g, rgb.b);
             }
-
             const CAM16_XYZ_TO_RGB = [
                 [0.401288, 0.650173, -0.051461],
                 [-0.250268, 1.204414, 0.045854],
@@ -1279,7 +1279,6 @@
                     l2 = lum(hex2);
                 return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
             }
-
             function enforceContrast(fgHex, bgHex, ratio = 4.5) {
                 const fgHct = hexToHct(fgHex);
                 const bgLum = (() => {
@@ -1310,6 +1309,7 @@
             const HCT_ROLE_TONES = {
                 heading: 35,
                 border2: 68,
+                border3: 58,
                 border1: 78,
                 bg: 92,
                 bg2: 86,
@@ -1331,7 +1331,7 @@
                     palette.pageBg = applyOffsetToHex(palette.pageBg, 0, elementOffsets['pageBg'].s, elementOffsets['pageBg'].l);
                 }
                 palette.border1 = palette.pageBg;
-                for (const name of ['heading', 'border2', 'bg', 'bg2']) {
+                for (const name of ['heading', 'border2', 'border3', 'bg', 'bg2']) {
                     if (elementOffsets[name] && (elementOffsets[name].s !== 0 || elementOffsets[name].l !== 0)) {
                         palette[name] = applyOffsetToHex(palette[name], 0, elementOffsets[name].s, elementOffsets[name].l);
                     }
@@ -1437,6 +1437,7 @@
                 docPreview.style.setProperty('--doc-heading', p.heading);
                 docPreview.style.setProperty('--doc-border1', p.border1);
                 docPreview.style.setProperty('--doc-border2', p.border2);
+                docPreview.style.setProperty('--doc-border3', p.border3);
                 docPreview.style.setProperty('--doc-bg', p.bg);
                 docPreview.style.setProperty('--doc-bg2', p.bg2);
                 docPreview.style.setProperty('--doc-page-bg', p.pageBg);
@@ -1479,6 +1480,7 @@
                 const items = [
                     ['Текст и граница шапки', p.heading],
                     ['Граница заголовков', p.border2],
+                    ['Граница подзаголовков', p.border3],
                     ['Граница таблиц', p.border1],
                     ['Фон заголовков', p.bg],
                     ['Фон подзаголовков', p.bg2],
