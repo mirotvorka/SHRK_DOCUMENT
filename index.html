@@ -393,6 +393,7 @@
             letter-spacing: 1px;
         }
         .doc-content {
+            
             background: var(--doc-page-bg, #cfcfcf);
             padding: 30pt 36pt 40pt;
             font-family: 'Jost', Arial, sans-serif;
@@ -416,7 +417,7 @@
         .c1 {
             border: 2.2pt solid var(--doc-heading);
             background: var(--doc-bg);
-            width: 100%;
+            width: 85%;
             text-align: center;
         }
         .c28 {
@@ -437,6 +438,7 @@
             font-weight: 700;
             color: var(--doc-heading);
             text-align: center;
+                font-size: 9pt;
         }
         .c18,
         .c32,
@@ -446,7 +448,7 @@
             background: var(--doc-bg);
         }
         .c18 {
-            border-left: 2.2pt dashed var(--doc-border1);
+            border-left: 1pt dashed var(--doc-border1);
             border-right: 1pt solid var(--doc-bg);
         }
         .c32 {
@@ -463,26 +465,26 @@
         }
         .text-title {
             font-family: 'Pangolin';
-            font-size: 23pt;
+            font-size: 19pt;
             color: var(--doc-heading);
         }
         .text-subtitle {
             font-family: 'Pangolin';
-            font-size: 15pt;
+            font-size: 11pt;
             color: var(--doc-heading);
         }
         .text-h1 {
             font-family: 'Pangolin', cursive;
-            font-size: 15pt;
+            font-size: 12pt;
             color: var(--doc-heading);
         }
         .text-h4 {
             font-family: 'Pangolin';
-            font-size: 14pt;
+            font-size: 11pt;
             color: var(--doc-heading);
         }
         .text-body {
-            font-size: 10pt;
+            font-size: 9pt;
             color: var(--doc-heading);
         }
         .text-bold {
@@ -490,7 +492,7 @@
             color: var(--doc-heading);
         }
         .p-spacer {
-            height: 11pt;
+            height: 9pt;
         }
         .p-justify {
             text-align: justify;
@@ -532,7 +534,7 @@
             font-weight: 600;
         }
         .doc-content table:has(.c36) {
-            width: 85%;
+            width: 90%;
             margin-left: auto;
             margin-right: auto;
         }
@@ -770,6 +772,8 @@
                 display: none !important;
             }
         }
+
+        
         @media (max-width: 480px) {
             .panel,
             .panel-right {
@@ -815,6 +819,7 @@
                 padding: 20pt 16pt 26pt;
             }
         }
+
     </style>
 </head>
 <body>
@@ -907,11 +912,11 @@
                     <p class="p-spacer"></p>
                     <p class="text-body p-justify">Так оформляются примеры сообщений, комментариев и <span class="text-bold">отписей</span>.</p>
                     <p class="p-spacer"></p>
-                    <table><tr><td class="c29"><p style="font-size:10pt;text-align:justify;"><span class="text-bold">Текст:</span></p><p style="font-size:10pt;text-align:justify;">Текст, текст, текст.</p></td></tr></table>
+                    <table><tr><td class="c29"><p style="font-size:9pt;text-align:justify;"><span class="text-bold">Текст:</span></p><p style="font-size:9pt;text-align:justify;">Текст, текст, текст.</p></td></tr></table>
                     <p class="p-spacer"></p>
                     <p class="text-body p-justify">А так оформляются таблицы.</p>
                     <p class="p-spacer"></p>
-                    <table><tr><td class="c34">ЗАГОЛОВОК</td><td class="c34">ЗАГОЛОВОК</td><td class="c34">ЗАГОЛОВОК</td></tr><tr><td class="c18"><p style="height:11pt;"></p></td><td class="c32"><p style="height:11pt;"></p></td><td class="c27"><p style="height:11pt;"></p></td></tr><tr><td class="c18"><p style="height:11pt;"></p></td><td class="c32"><p style="height:11pt;"></p></td><td class="c27"><p style="height:11pt;"></p></td></tr></table>
+                    <table><tr><td class="c34">ЗАГОЛОВОК</td><td class="c34">ЗАГОЛОВОК</td><td class="c34">ЗАГОЛОВОК</td></tr><tr><td class="c18"><p style="height:9pt;"></p></td><td class="c32"><p style="height:9pt;"></p></td><td class="c27"><p style="height:9pt;"></p></td></tr><tr><td class="c18"><p style="height:9pt;"></p></td><td class="c32"><p style="height:9pt;"></p></td><td class="c27"><p style="height:9pt;"></p></td></tr></table>
                     <p class="p-spacer"></p>
                     <table><tr><td class="c37"><p style="line-height:1.4;"><span class="text-bold" style="font-size:8.5pt;">АВТОРСТВО:</span> <span style="font-size:8.5pt;">Имя автора информации [его ID]</span><br><span class="text-bold" style="font-size:8.5pt;">ОФОРМЛЕНИЕ ДОКУМЕНТА:</span> <span style="font-size:8.5pt;">Горе От Ума [1603030] и Море Правду Говорит [1291893]</span></p></td></tr></table>
                 </div>
