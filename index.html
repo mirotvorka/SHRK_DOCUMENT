@@ -274,6 +274,11 @@
             flex: 1;
             min-width: 70px;
         }
+        .scheme-btn.active {
+            background: var(--text);
+            color: var(--panel);
+            border-color: var(--text);
+        }
         .settings-block {
             display: flex;
             flex-direction: column;
@@ -529,7 +534,7 @@
             font-weight: 600;
         }
         .doc-content table:has(.c36) {
-            width: 70%;
+            width: 85%;
             margin-left: auto;
             margin-right: auto;
         }
@@ -846,7 +851,6 @@
             <span class="val" id="lightVal">75%</span>
         </div>
         
-        <!-- H выровнен аккуратно слева -->
         <div class="slider-item">
             <label>H</label>
             <button class="step-btn" id="hueMinusBtn">−</button>
@@ -930,7 +934,7 @@
                     <div class="settings-row">
                         <input type="text" class="params-input" id="pasteParamsInput"
                         placeholder="hue: 60°, sat: 52%, light: 75%" />
-                        <button class="btn btn-apply" id="applyParamsBtn">Применить</button>
+                        <button class="btn btn-apply" id="applyParamsBtn">↩ Применить</button>
                     </div>
                 </div>
             </div>
@@ -972,6 +976,14 @@
             const leftZoomOutBtn = document.getElementById('leftZoomOutBtn');
             const leftZoomResetBtn = document.getElementById('leftZoomResetBtn');
             const leftZoomLevel = document.getElementById('leftZoomLevel');
+            const schemeButtons = document.querySelectorAll('.scheme-btn');
+            let scheme = 'mono';
+            const ROLE_HUE_OFFSETS = {
+                mono: { heading: 0, border2: 0, bg: 0, bg2: 0, pageBg: 0 },
+                analogous: { heading: -12, border2: -22, bg: 24, bg2: 12, pageBg: 30 },
+                complementary: { heading: 0, border2: 0, bg: 180, bg2: 180, pageBg: 180 },
+                triadic: { heading: 0, border2: 120, bg: 240, bg2: 240, pageBg: 240 }
+            };
             const EDITABLE_ELEMENTS = ['heading', 'border2', 'bg', 'bg2', 'pageBg'];
             const ELEMENT_LABELS = {
                 heading: 'Текст и границы шапки',
@@ -1015,13 +1027,13 @@
                 hue = (hue + delta + 360) % 360;
                 updateSlidersAndWheel();
             }
-            hueMinusBtn.addEventListener('click', () => changeHue(-5));
-            huePlusBtn.addEventListener('click', () => changeHue(5));
+            hueMinusBtn.addEventListener('click', () => changeHue(-1));
+            huePlusBtn.addEventListener('click', () => changeHue(1));
             document.querySelectorAll('.step-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const target = this.dataset.target;
                     const dir = parseInt(this.dataset.dir);
-                    const step = 5;
+                    const step = 1;
                     if (target === 'sat') {
                         let val = parseInt(satSlider.value) + dir * step;
                         val = Math.max(5, Math.min(100, val));
@@ -1078,64 +1090,184 @@
                 const rgb = hslToRgb(h, s, l);
                 return rgbToHex(rgb.r, rgb.g, rgb.b);
             }
-            function rgbToOklch(r, g, b) {
-                const lr = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
-                const R = lr(r),
-                    G = lr(g),
-                    B = lr(b);
-                const L = 0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B;
-                const M = 0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B;
-                const S = 0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B;
-                const l_ = Math.cbrt(L),
-                    m_ = Math.cbrt(M),
-                    s_ = Math.cbrt(S);
-                const okl = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
-                const a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
-                const b_ = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
-                const C = Math.sqrt(a * a + b_ * b_);
-                const H = (Math.atan2(b_, a) * 180 / Math.PI + 360) % 360;
-                return { L: okl, C: C, H: H };
+
+            const CAM16_XYZ_TO_RGB = [
+                [0.401288, 0.650173, -0.051461],
+                [-0.250268, 1.204414, 0.045854],
+                [-0.002079, 0.048952, 0.953127]
+            ];
+            const CAM16_RGB_TO_XYZ = [
+                [1.86206786, -1.01125463, 0.14918677],
+                [0.38752654, 0.62144744, -0.00897398],
+                [-0.01584150, -0.03412294, 1.04996444]
+            ];
+            const SRGB_TO_XYZ = [
+                [0.41233895, 0.35762064, 0.18051042],
+                [0.2126, 0.7152, 0.0722],
+                [0.01932141, 0.11916382, 0.95034478]
+            ];
+            const XYZ_TO_SRGB = [
+                [3.2406, -1.5372, -0.4986],
+                [-0.9689, 1.8758, 0.0415],
+                [0.0557, -0.2040, 1.0570]
+            ];
+            function matMul3(m, v) {
+                return [
+                    m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
+                    m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
+                    m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2]
+                ];
             }
-            function oklchToRgb(L, C, H) {
-                const a = C * Math.cos(H * Math.PI / 180);
-                const b = C * Math.sin(H * Math.PI / 180);
-                const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-                const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-                const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
-                const l = l_ * l_ * l_,
-                    m = m_ * m_ * m_,
-                    s = s_ * s_ * s_;
-                const x = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
-                const y = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
-                const z = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
-                const rLin = 3.2404542 * x - 1.5371385 * y - 0.4985314 * z;
-                const gLin = -0.9692660 * x + 1.8760108 * y + 0.0415560 * z;
-                const bLin = 0.0556434 * x - 0.2040259 * y + 1.0572252 * z;
-                const delin = v => v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
-                return {
-                    r: Math.round(delin(rLin) * 255),
-                    g: Math.round(delin(gLin) * 255),
-                    b: Math.round(delin(bLin) * 255)
-                };
+            function srgbToLinear(c) {
+                c /= 255;
+                return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
             }
-            function oklchToHex(L, C, H) {
-                const rgb = oklchToRgb(L, C, H);
-                return rgbToHex(rgb.r, rgb.g, rgb.b);
+            function linearToSrgbRaw(c) {
+                return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
             }
-            function tonalPalette(baseHex) {
-                const rgb = hexToRgb(baseHex);
-                const okl = rgbToOklch(rgb.r, rgb.g, rgb.b);
-                const chroma = Math.max(okl.C, 0.04);
-                const tones = [];
-                for (let t = 0; t <= 100; t += 5) {
-                    const Lt = t / 100;
-                    const Cf = 4 * Lt * (1 - Lt);
-                    tones.push({ L: Lt, C: chroma * Cf * 0.8, H: okl.H });
+            function argbToXyz(r, g, b) {
+                const rl = srgbToLinear(r) * 100,
+                    gl = srgbToLinear(g) * 100,
+                    bl = srgbToLinear(b) * 100;
+                return matMul3(SRGB_TO_XYZ, [rl, gl, bl]);
+            }
+            function xyzToRgbRaw(x, y, z) {
+                const [rl, gl, bl] = matMul3(XYZ_TO_SRGB, [x / 100, y / 100, z / 100]);
+                return [linearToSrgbRaw(rl), linearToSrgbRaw(gl), linearToSrgbRaw(bl)];
+            }
+            function xyzToRgbClamped(x, y, z) {
+                const raw = xyzToRgbRaw(x, y, z);
+                return raw.map(v => Math.max(0, Math.min(255, Math.round(v * 255))));
+            }
+            function inSrgbGamut(x, y, z) {
+                const raw = xyzToRgbRaw(x, y, z);
+                return raw.every(v => v >= -0.001 && v <= 1.001);
+            }
+            function labF(t) { const e = 6 / 29;
+                return t > e * e * e ? Math.cbrt(t) : t / (3 * e * e) + 4 / 29; }
+            function labInvF(t) { const e = 6 / 29;
+                return t > e ? t * t * t : 3 * e * e * (t - 4 / 29); }
+            function lstarFromY(y) { return 116 * labF(y / 100) - 16; }
+            function yFromLstar(lstar) { return 100 * labInvF((lstar + 16) / 116); }
+            const HCT_WHITE_XYZ = [95.047, 100.0, 108.883];
+            const HCT_ADAPTING_LUMINANCE = (200 / Math.PI) * yFromLstar(50) / 100;
+            const HCT_BACKGROUND_LSTAR = 50;
+            const HCT_SURROUND_F = 1.0,
+                HCT_SURROUND_C = 0.69,
+                HCT_SURROUND_NC = 1.0;
+            function computeViewingConditions() {
+                const rgbW = matMul3(CAM16_XYZ_TO_RGB, HCT_WHITE_XYZ);
+                const la = HCT_ADAPTING_LUMINANCE;
+                const k = 1 / (5 * la + 1);
+                const k4 = k * k * k * k;
+                const fl = k4 * la + 0.1 * (1 - k4) * (1 - k4) * Math.cbrt(5 * la);
+                const n = yFromLstar(HCT_BACKGROUND_LSTAR) / HCT_WHITE_XYZ[1];
+                const z = 1.48 + Math.sqrt(n);
+                const nbb = 0.725 / Math.pow(n, 0.2);
+                const d = Math.max(0, Math.min(1, HCT_SURROUND_F * (1 - (1 / 3.6) * Math.exp((-la - 42) / 92))));
+                const rgbD = rgbW.map(comp => d * (100 / comp) + 1 - d);
+                const rgbAF = rgbW.map((comp, i) => Math.pow(fl * rgbD[i] * comp / 100, 0.42));
+                const rgbA = rgbAF.map(af => 400 * af / (af + 27.13) + 0.1);
+                const aw = (2 * rgbA[0] + rgbA[1] + 0.05 * rgbA[2] - 0.305) * nbb;
+                return { n, z, nbb, ncb: nbb, c: HCT_SURROUND_C, nc: HCT_SURROUND_NC, fl, aw, rgbD };
+            }
+            const VC = computeViewingConditions();
+            function xyzToCam16(x, y, z) {
+                const rgb = matMul3(CAM16_XYZ_TO_RGB, [x, y, z]);
+                const rgbD = [rgb[0] * VC.rgbD[0], rgb[1] * VC.rgbD[1], rgb[2] * VC.rgbD[2]];
+                const rgbAF = rgbD.map(v => Math.pow(VC.fl * Math.abs(v) / 100, 0.42));
+                const rgbA = rgbD.map((v, i) => Math.sign(v) * 400 * rgbAF[i] / (rgbAF[i] + 27.13) + 0.1);
+                const a = rgbA[0] - 12 * rgbA[1] / 11 + rgbA[2] / 11;
+                const b = (rgbA[0] + rgbA[1] - 2 * rgbA[2]) / 9;
+                let hueRad = Math.atan2(b, a);
+                if (hueRad < 0) hueRad += 2 * Math.PI;
+                const hueDeg = hueRad * 180 / Math.PI;
+                const p2raw = (2 * rgbA[0] + rgbA[1] + 0.05 * rgbA[2]);
+                const ac = (p2raw - 0.305) * VC.nbb;
+                const j = 100 * Math.pow(ac / VC.aw, VC.c * VC.z);
+                const et = 0.25 * (Math.cos(hueRad + 2) + 3.8);
+                const t = (50000 / 13 * VC.nc * VC.ncb * et * Math.sqrt(a * a + b * b)) / (rgbA[0] + rgbA[1] + 21 * rgbA[2] / 20);
+                const alpha = Math.pow(t, 0.9) * Math.pow(1.64 - Math.pow(0.29, VC.n), 0.73);
+                const chroma = alpha * Math.sqrt(j / 100);
+                return { hue: hueDeg, chroma, j };
+            }
+            function inverseCompress(comp) {
+                const adjusted = comp - 0.1;
+                const absAdj = Math.abs(adjusted);
+                const base = Math.max(0, 27.13 * absAdj / (400 - absAdj));
+                return Math.sign(adjusted) * (100 / VC.fl) * Math.pow(base, 1 / 0.42);
+            }
+            function camJchToXyz(j, chroma, hueDeg) {
+                if (j <= 0.0001 || chroma <= 0.0001) {
+                    const ac0 = VC.aw * Math.pow(Math.max(j, 0.0001) / 100, 1 / (VC.c * VC.z));
+                    const p2_0 = ac0 / VC.nbb;
+                    const P0 = p2_0 + 0.305;
+                    const x0 = P0 / 3.05;
+                    const rD0 = inverseCompress(x0),
+                        gD0 = inverseCompress(x0),
+                        bD0 = inverseCompress(x0);
+                    const r0 = rD0 / VC.rgbD[0],
+                        g0 = gD0 / VC.rgbD[1],
+                        bl0 = bD0 / VC.rgbD[2];
+                    return matMul3(CAM16_RGB_TO_XYZ, [r0, g0, bl0]);
                 }
-                return tones;
+                const hueRad = hueDeg * Math.PI / 180;
+                const ac = VC.aw * Math.pow(j / 100, 1 / (VC.c * VC.z));
+                const p2 = ac / VC.nbb;
+                const et = 0.25 * (Math.cos(hueRad + 2) + 3.8);
+                const p1 = et * (50000 / 13) * VC.nc * VC.ncb;
+                const t = Math.pow(chroma / (Math.pow(j / 100, 0.5) * Math.pow(1.64 - Math.pow(0.29, VC.n), 0.73)), 1 / 0.9);
+                const hCos = Math.cos(hueRad),
+                    hSin = Math.sin(hueRad);
+                const gamma = 23 * (p2 + 0.305) * t / (23 * p1 + 11 * t * hCos + 108 * t * hSin);
+                const a = gamma * hCos,
+                    b = gamma * hSin;
+                const P = p2 + 0.305;
+                const rA = (460 * P + 451 * a + 288 * b) / 1403;
+                const gA = (460 * P - 891 * a - 261 * b) / 1403;
+                const bA = (460 * P - 220 * a - 6300 * b) / 1403;
+                const rD = inverseCompress(rA),
+                    gD = inverseCompress(gA),
+                    bD = inverseCompress(bA);
+                const r = rD / VC.rgbD[0],
+                    g = gD / VC.rgbD[1],
+                    bl = bD / VC.rgbD[2];
+                return matMul3(CAM16_RGB_TO_XYZ, [r, g, bl]);
             }
-            function pickTone(tones, targetL) {
-                return tones.reduce((prev, curr) => Math.abs(curr.L - targetL) < Math.abs(prev.L - targetL) ? curr : prev);
+            function hexToHct(hex) {
+                const rgb = hexToRgb(hex);
+                const xyz = argbToXyz(rgb.r, rgb.g, rgb.b);
+                const cam = xyzToCam16(xyz[0], xyz[1], xyz[2]);
+                return { hue: cam.hue, chroma: cam.chroma, tone: lstarFromY(xyz[1]) };
+            }
+            function hctToXyz(hue, chroma, tone) {
+                const targetY = yFromLstar(tone);
+                if (tone <= 0.01) return [0, 0, 0];
+                if (tone >= 99.99) return HCT_WHITE_XYZ.slice();
+                let lo = 0,
+                    hi = 100,
+                    xyz = null;
+                for (let i = 0; i < 30; i++) {
+                    const mid = (lo + hi) / 2;
+                    xyz = camJchToXyz(mid, chroma, hue);
+                    if (xyz[1] < targetY) lo = mid;
+                    else hi = mid;
+                }
+                return xyz;
+            }
+            function hctToHex(hue, chroma, tone) {
+                let c = chroma;
+                for (let i = 0; i < 40; i++) {
+                    const xyz = hctToXyz(hue, c, tone);
+                    if (inSrgbGamut(xyz[0], xyz[1], xyz[2]) || c <= 0.5) {
+                        const rgb = xyzToRgbClamped(xyz[0], xyz[1], xyz[2]);
+                        return rgbToHex(rgb[0], rgb[1], rgb[2]);
+                    }
+                    c *= 0.9;
+                }
+                const xyz = hctToXyz(hue, 0, tone);
+                const rgb = xyzToRgbClamped(xyz[0], xyz[1], xyz[2]);
+                return rgbToHex(rgb[0], rgb[1], rgb[2]);
             }
             function contrastRatio(hex1, hex2) {
                 const lum = hex => {
@@ -1147,21 +1279,25 @@
                     l2 = lum(hex2);
                 return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
             }
-            function enforceContrast(fg, bg, ratio = 4.5) {
-                const fgRgb = hexToRgb(fg);
+
+            function enforceContrast(fgHex, bgHex, ratio = 4.5) {
+                const fgHct = hexToHct(fgHex);
                 const bgLum = (() => {
-                    const rgb = hexToRgb(bg);
+                    const rgb = hexToRgb(bgHex);
                     const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
                     return 0.2126 * f(rgb.r) + 0.7152 * f(rgb.g) + 0.0722 * f(rgb.b);
                 })();
-                const step = bgLum > 0.5 ? -3 : 3;
-                for (let i = 0; i < 50; i++) {
-                    if (contrastRatio(rgbToHex(fgRgb.r, fgRgb.g, fgRgb.b), bg) >= ratio) break;
-                    fgRgb.r = Math.max(0, Math.min(255, fgRgb.r + step));
-                    fgRgb.g = Math.max(0, Math.min(255, fgRgb.g + step));
-                    fgRgb.b = Math.max(0, Math.min(255, fgRgb.b + step));
+                const dir = bgLum > 0.5 ? -1 : 1;
+                let tone = fgHct.tone;
+                let bestHex = fgHex;
+                for (let i = 0; i < 60; i++) {
+                    const hex = hctToHex(fgHct.hue, fgHct.chroma, tone);
+                    bestHex = hex;
+                    if (contrastRatio(hex, bgHex) >= ratio) break;
+                    tone = Math.max(0, Math.min(100, tone + dir * 1.5));
+                    if (tone <= 0 || tone >= 100) break;
                 }
-                return rgbToHex(fgRgb.r, fgRgb.g, fgRgb.b);
+                return bestHex;
             }
             function applyOffsetToHex(baseHex, offsetH, offsetS, offsetL) {
                 const rgb = hexToRgb(baseHex);
@@ -1171,22 +1307,22 @@
                 const newL = Math.max(0, Math.min(100, hsl.l + offsetL));
                 return hslToHex(newH, newS, newL);
             }
+            const HCT_ROLE_TONES = {
+                heading: 35,
+                border2: 68,
+                border1: 78,
+                bg: 92,
+                bg2: 86,
+                pageBg: 82
+            };
             function generatePalette(baseHex, pageBgHex = null) {
-                const tones = tonalPalette(baseHex);
-                const roles = {
-                    heading: { L: 0.35 },
-                    border2: { L: 0.68 },
-                    border1: { L: 0.78 },
-                    bg: { L: 0.92 },
-                    bg2: { L: 0.86 },
-                    pageBg: { L: 0.82 }
-                };
+                const base = hexToHct(baseHex);
+                const offsets = ROLE_HUE_OFFSETS[scheme] || ROLE_HUE_OFFSETS.mono;
                 const palette = {};
-                for (const name in roles) {
-                    if (roles.hasOwnProperty(name)) {
-                        const tone = pickTone(tones, roles[name].L);
-                        let hex = oklchToHex(tone.L, tone.C, tone.H);
-                        palette[name] = hex;
+                for (const name in HCT_ROLE_TONES) {
+                    if (HCT_ROLE_TONES.hasOwnProperty(name)) {
+                        const roleHue = (base.hue + (offsets[name] || 0) + 360) % 360;
+                        palette[name] = hctToHex(roleHue, base.chroma, HCT_ROLE_TONES[name]);
                     }
                 }
                 if (pageBgHex) {
@@ -1438,7 +1574,7 @@
                             const prop = this.dataset.prop;
                             const dir = parseInt(this.dataset.dir);
                             const current = elementOffsets[name][prop];
-                            setOffsetVal(prop, current + dir * 5, row);
+                            setOffsetVal(prop, current + dir * 1, row);
                         });
                     });
                 });
@@ -1449,6 +1585,18 @@
                 applyColor(hexBase, false);
                 updateParamsDisplay();
                 rebuildRightPanel();
+            });
+ 
+            schemeButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    scheme = this.dataset.scheme;
+                    schemeButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const hexBase = hslToHex(hue, saturation, lightness);
+                    applyColor(hexBase, false);
+                    updateParamsDisplay();
+                    rebuildRightPanel();
+                });
             });
             copyParamsBtn.addEventListener('click', function() {
                 const text = buildParamsString();
@@ -1515,18 +1663,16 @@
                 updateParamsDisplay();
             });
             btnDark.addEventListener('click', function() {
-                const rgb = hexToRgb(hslToHex(hue, saturation, lightness));
-                const okl = rgbToOklch(rgb.r, rgb.g, rgb.b);
+                const hct = hexToHct(hslToHex(hue, saturation, lightness));
                 EDITABLE_ELEMENTS.forEach(name => { elementOffsets[name] = { ...DEFAULT_OFFSETS }; });
-                applyColor(oklchToHex(0.18, 0.05, okl.H), true);
+                applyColor(hctToHex(hct.hue, Math.min(hct.chroma, 24), 18), true);
                 rebuildRightPanel();
                 updateParamsDisplay();
             });
             btnLight.addEventListener('click', function() {
-                const rgb = hexToRgb(hslToHex(hue, saturation, lightness));
-                const okl = rgbToOklch(rgb.r, rgb.g, rgb.b);
+                const hct = hexToHct(hslToHex(hue, saturation, lightness));
                 EDITABLE_ELEMENTS.forEach(name => { elementOffsets[name] = { ...DEFAULT_OFFSETS }; });
-                applyColor(oklchToHex(0.88, 0.03, okl.H), true);
+                applyColor(hctToHex(hct.hue, Math.min(hct.chroma, 16), 88), true);
                 rebuildRightPanel();
                 updateParamsDisplay();
             });
